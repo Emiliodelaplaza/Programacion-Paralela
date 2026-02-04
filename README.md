@@ -1,1 +1,1 @@
-# Programaci-n-Paralela
+# Programacion-Paralela
