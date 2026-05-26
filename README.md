@@ -56,6 +56,9 @@ El proyecto está organizado de la siguiente manera:
 - **docs/design.md**  
   Documento corto de diseño de arquitectura y decisiones técnicas.
 
+- **docs/final_report.md**  
+  Informe final de la práctica (metodología, resultados y discusión).
+
 - **requirements.txt**  
   Dependencias necesarias.
 
