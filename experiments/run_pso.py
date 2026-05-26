@@ -31,7 +31,11 @@ def main():
     # Select the objective function and create bounds for 10 dimensions.
     spec = BENCHMARKS[args.objective]
     d = 10
-    bounds = BoxBounds(low=spec["low"] * np.ones(d), high=spec["high"] * np.ones(d))
+    if "bounds_builder" in spec:
+        low, high = spec["bounds_builder"](d)
+        bounds = BoxBounds(low=low, high=high)
+    else:
+        bounds = BoxBounds(low=spec["low"] * np.ones(d), high=spec["high"] * np.ones(d))
 
     if args.strategy in {"v1", "v2", "v3"} and args.workers <= 0:
         raise ValueError("workers must be > 0 when strategy is v1, v2, or v3")

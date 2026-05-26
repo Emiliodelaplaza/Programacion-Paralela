@@ -1,6 +1,7 @@
 import asyncio
 
 import numpy as np
+from .wsn_coverage import create_wsn_objective, make_wsn_bounds
 
 
 def sphere(x):
@@ -35,6 +36,14 @@ def make_async_objective(objective, latency):
     return _objective
 
 
+def _wsn_bounds_from_dim(dim):
+    dim = int(dim)
+    if dim <= 0 or dim % 2 != 0:
+        raise ValueError("wsn objective requires an even dimension (2 * num_sensors)")
+    num_sensors = dim // 2
+    return make_wsn_bounds(num_sensors=num_sensors, width=100.0, height=60.0)
+
+
 BENCHMARKS = {
     "sphere": {
         "func": sphere,
@@ -55,5 +64,19 @@ BENCHMARKS = {
         "func": ackley,
         "low": -32.768,
         "high": 32.768,
+    },
+    "wsn": {
+        "func": create_wsn_objective(
+            num_sensors=None,
+            width=100.0,
+            height=60.0,
+            grid_size=20,
+            alpha=0.01,
+            seed=None,
+            vectorized=True,
+        ),
+        "low": 0.0,
+        "high": 100.0,
+        "bounds_builder": _wsn_bounds_from_dim,
     },
 }

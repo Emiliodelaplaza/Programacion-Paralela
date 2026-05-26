@@ -4,7 +4,7 @@
 
 Este proyecto implementa el algoritmo **PSO (Particle Swarm Optimization)** y varias versiones de ejecución para comparar rendimiento, tiempos y resultados en distintos benchmarks.
 
-Los benchmarks utilizados son Sphere, Rosenbrock, Rastrigin y Ackley.
+Los benchmarks utilizados son Sphere, Rosenbrock, Rastrigin, Ackley y un caso aplicado de cobertura WSN.
 
 El objetivo principal es:
 - resolver funciones de optimización,
@@ -39,7 +39,7 @@ El proyecto está organizado de la siguiente manera:
   - asyncio (V3).
 
 - **objectives/**  
-  Benchmarks matemáticos (Sphere, Rosenbrock, Rastrigin, Ackley) y utilidades para objetivo asíncrono en V3.
+  Benchmarks matemáticos (Sphere, Rosenbrock, Rastrigin, Ackley), caso aplicado WSN y utilidades para objetivo asíncrono en V3.
 
 - **viz/**  
   Generación de visualizaciones del comportamiento del enjambre y convergencia.
@@ -70,6 +70,23 @@ El trabajo incluye varias versiones del PSO:
 
 ---
 
+## 3.1 Caso aplicado: Cobertura de área en WSN
+
+Se añadió un objetivo de **Optimización de Cobertura de Área en Redes de Sensores Inalámbricos (WSN)**.
+
+- Cada partícula representa posiciones de sensores en 2D:  
+  `[x1, y1, x2, y2, ..., xM, yM]`
+- La cobertura por punto se calcula como:  
+  `coverage_point = 1 - product(1 - p_i)`
+- Con probabilidad de detección por sensor:  
+  `p_i = exp(-alpha * distancia^2)`
+- Como PSO minimiza, la función usada es:  
+  `fitness = 1 - cobertura_media`
+
+Este caso sirve para comparar estrategias V0-V4 en un escenario más aplicado, donde cada evaluación implica más cálculo numérico.
+
+---
+
 ## 4. Ejecuciones
 
 ## Ruta
@@ -90,6 +107,7 @@ py
 py -m experiments.run_pso
 py -m experiments.run_pso --strategy v4 --objective ackley
 py -m experiments.run_pso --strategy v3 --workers 4 --async-latency 0.001 --objective rastrigin
+py -m experiments.run_pso --objective wsn
 
 ## Benchmark
 

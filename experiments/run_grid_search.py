@@ -43,8 +43,11 @@ def _write_csv(path, rows, headers):
 def _run_one(objective_name, objective_spec, dim, seed, cfg, strategy, workers, batch_size, async_latency):
     """Run one grid-search configuration and return its result."""
     objective = objective_spec["func"]
-    low = objective_spec["low"] * np.ones(dim)
-    high = objective_spec["high"] * np.ones(dim)
+    if "bounds_builder" in objective_spec:
+        low, high = objective_spec["bounds_builder"](dim)
+    else:
+        low = objective_spec["low"] * np.ones(dim)
+        high = objective_spec["high"] * np.ones(dim)
 
     bounds = BoxBounds(low=low, high=high)
     params = PSOParams(

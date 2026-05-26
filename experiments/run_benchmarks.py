@@ -26,8 +26,11 @@ def _parse_int_list(text):
 def _run_one(objective_name, objective_spec, dim, seed, pso_params, strategy, workers, batch_size, async_latency):
     """Run one benchmark configuration and return its results."""
     objective = objective_spec["func"]
-    low = objective_spec["low"] * np.ones(dim)
-    high = objective_spec["high"] * np.ones(dim)
+    if "bounds_builder" in objective_spec:
+        low, high = objective_spec["bounds_builder"](dim)
+    else:
+        low = objective_spec["low"] * np.ones(dim)
+        high = objective_spec["high"] * np.ones(dim)
 
     bounds = BoxBounds(low=low, high=high)
     params = PSOParams(
