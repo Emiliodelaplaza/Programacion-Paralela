@@ -32,6 +32,20 @@ def _parse_float_list(text):
     return [float(part.strip()) for part in text.split(",")]
 
 
+def _parse_objectives_list(text):
+    """Convert a comma-separated objective list into validated names."""
+    text = text.strip()
+    if not text:
+        return []
+    names = [part.strip() for part in text.split(",") if part.strip()]
+    invalid = [name for name in names if name not in BENCHMARKS]
+    if invalid:
+        valid_names = ", ".join(BENCHMARKS.keys())
+        invalid_names = ", ".join(invalid)
+        raise ValueError(f"Invalid objective(s): {invalid_names}. Valid objectives: {valid_names}")
+    return names
+
+
 def _write_csv(path, rows, headers):
     """Write rows into a CSV file."""
     with path.open("w", newline="", encoding="utf-8") as f:
@@ -132,6 +146,7 @@ def main():
     parser.add_argument("--log-every", type=int, default=10, help="Log every N iterations")
     parser.add_argument("--log-level", default="INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)")
     parser.add_argument("--output-dir", default="results", help="Directory for output files")
+    parser.add_argument("--objectives", default=None, help="Comma-separated objective names")
     args = parser.parse_args()
     
     logging.basicConfig(
@@ -141,6 +156,12 @@ def main():
 
     dims = _parse_int_list(args.dims)
     seeds = _parse_int_list(args.seeds)
+    selected_objective_names = (
+        _parse_objectives_list(args.objectives)
+        if args.objectives is not None
+        else list(BENCHMARKS.keys())
+    )
+    selected_objectives = {name: BENCHMARKS[name] for name in selected_objective_names}
     w_grid = _parse_float_list(args.w_grid)
     c1_grid = _parse_float_list(args.c1_grid)
     c2_grid = _parse_float_list(args.c2_grid)
@@ -173,7 +194,7 @@ def main():
 
     # Build all hyperparameter combinations to test.
     hyper_grid = list(itertools.product(w_grid, c1_grid, c2_grid, n_particles_grid, n_iters_grid))
-    total_runs = len(BENCHMARKS) * len(dims) * len(seeds) * len(hyper_grid)
+    total_runs = len(selected_objectives) * len(dims) * len(seeds) * len(hyper_grid)
 
     run_id = time.strftime("%Y%m%d_%H%M%S")
     output_dir = Path(args.output_dir) / f"grid_{args.strategy}_{run_id}"
@@ -185,7 +206,7 @@ def main():
         "batch_size": effective_batch_size,
         "async_latency": args.async_latency,
         "timestamp": run_id,
-        "benchmarks": list(BENCHMARKS.keys()),
+        "benchmarks": selected_objective_names,
         "dims": dims,
         "seeds": seeds,
         "grid": {
@@ -217,7 +238,7 @@ def main():
     run_counter = 0
 
     # Run every benchmark with every dimension, seed, and hyperparameter combination.
-    for objective_name, objective_spec in BENCHMARKS.items():
+    for objective_name, objective_spec in selected_objectives.items():
         for dim in dims:
             for seed in seeds:
                 for w, c1, c2, n_particles, n_iters in hyper_grid:

@@ -117,6 +117,7 @@ py -m experiments.run_benchmarks --strategy v1 --workers 4
 py -m experiments.run_benchmarks --strategy v2 --workers 4 --batch-size 8
 py -m experiments.run_benchmarks --strategy v3 --workers 4 --async-latency 0.001
 py -m experiments.run_benchmarks --strategy v4
+py -m experiments.run_benchmarks --objectives wsn --strategy v0
 
 Ejemplo rápido:
 
@@ -131,6 +132,7 @@ py -m experiments.run_grid_search --strategy v1 --workers 4
 py -m experiments.run_grid_search --strategy v2 --workers 4 --batch-size 8
 py -m experiments.run_grid_search --strategy v3 --workers 4 --async-latency 0.001
 py -m experiments.run_grid_search --strategy v4
+py -m experiments.run_grid_search --objectives wsn --strategy v0
 
 Ejemplo rápido:
 

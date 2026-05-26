@@ -23,6 +23,20 @@ def _parse_int_list(text):
     return [int(part.strip()) for part in text.split(",")]
 
 
+def _parse_objectives_list(text):
+    """Convert a comma-separated objective list into validated names."""
+    text = text.strip()
+    if not text:
+        return []
+    names = [part.strip() for part in text.split(",") if part.strip()]
+    invalid = [name for name in names if name not in BENCHMARKS]
+    if invalid:
+        valid_names = ", ".join(BENCHMARKS.keys())
+        invalid_names = ", ".join(invalid)
+        raise ValueError(f"Invalid objective(s): {invalid_names}. Valid objectives: {valid_names}")
+    return names
+
+
 def _run_one(objective_name, objective_spec, dim, seed, pso_params, strategy, workers, batch_size, async_latency):
     """Run one benchmark configuration and return its results."""
     objective = objective_spec["func"]
@@ -124,6 +138,7 @@ def main():
     parser.add_argument("--log-every", type=int, default=10, help="Log every N iterations")
     parser.add_argument("--log-level", default="INFO", help="Logging level (DEBUG, INFO, WARNING, ERROR)")
     parser.add_argument("--output-dir", default="results", help="Directory for output files")
+    parser.add_argument("--objectives", default=None, help="Comma-separated objective names")
     args = parser.parse_args()
 
     logging.basicConfig(
@@ -133,6 +148,12 @@ def main():
 
     dims = _parse_int_list(args.dims)
     seeds = _parse_int_list(args.seeds)
+    selected_objective_names = (
+        _parse_objectives_list(args.objectives)
+        if args.objectives is not None
+        else list(BENCHMARKS.keys())
+    )
+    selected_objectives = {name: BENCHMARKS[name] for name in selected_objective_names}
 
     if not dims:
         raise ValueError("dims cannot be empty")
@@ -172,7 +193,7 @@ def main():
         "batch_size": effective_batch_size,
         "async_latency": args.async_latency,
         "timestamp": run_id,
-        "benchmarks": list(BENCHMARKS.keys()),
+        "benchmarks": selected_objective_names,
         "dims": dims,
         "seeds": seeds,
         "pso_params": pso_params,
@@ -193,11 +214,11 @@ def main():
     summary_rows = []
     history_rows = []
 
-    total_runs = len(BENCHMARKS) * len(dims) * len(seeds)
+    total_runs = len(selected_objectives) * len(dims) * len(seeds)
     run_counter = 0
 
     # Run all combinations of benchmark, dimension, and seed.
-    for objective_name, objective_spec in BENCHMARKS.items():
+    for objective_name, objective_spec in selected_objectives.items():
         for dim in dims:
             for seed in seeds:
                 run_counter += 1
