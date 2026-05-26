@@ -142,6 +142,8 @@ py -m experiments.run_grid_search --strategy v1 --workers 4 --dims 2 --seeds 7 -
 py
 py -m viz.make_viz
 py -m viz.make_viz --objective ackley --dim 2
+py -m viz.plot_wsn
+py -m viz.plot_wsn --num-sensors 6 --width 100 --height 60 --grid-size 40 --alpha 0.01 --n-particles 40 --n-iters 100 --output results/viz/wsn_coverage.png
 
 ## Análisis de resultados
 
