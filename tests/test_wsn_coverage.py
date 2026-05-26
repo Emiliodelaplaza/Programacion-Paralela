@@ -1,4 +1,6 @@
-﻿import numpy as np
+﻿import pickle
+
+import numpy as np
 import pytest
 
 from objectives import create_wsn_objective, make_wsn_bounds
@@ -56,3 +58,10 @@ def test_wsn_raises_for_wrong_position_size():
     objective = create_wsn_objective(num_sensors=3, width=100.0, height=60.0)
     with pytest.raises(ValueError):
         objective(np.array([1.0, 2.0, 3.0], dtype=float))
+
+
+def test_wsn_objective_is_pickle_serializable():
+    objective = create_wsn_objective(num_sensors=3, width=100.0, height=60.0, grid_size=10, alpha=0.01, seed=7)
+    restored = pickle.loads(pickle.dumps(objective))
+    position = np.array([10.0, 10.0, 50.0, 30.0, 90.0, 50.0], dtype=float)
+    assert np.isclose(objective(position), restored(position), rtol=0.0, atol=1e-15)

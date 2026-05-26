@@ -37,6 +37,90 @@ def _build_grid_points(width, height, grid_size, seed):
     return np.column_stack([x_rand, y_rand])
 
 
+class WSNCoverageObjective:
+    """Pickle-friendly callable objective for WSN area coverage."""
+
+    def __init__(
+        self,
+        num_sensors=None,
+        width=100.0,
+        height=60.0,
+        grid_size=20,
+        alpha=0.01,
+        seed=None,
+        vectorized=True,
+    ):
+        self.num_sensors = None if num_sensors is None else int(num_sensors)
+        self.width = float(width)
+        self.height = float(height)
+        self.grid_size = int(grid_size)
+        self.alpha = float(alpha)
+        self.seed = None if seed is None else int(seed)
+        self.vectorized = bool(vectorized)
+
+        if self.num_sensors is not None and self.num_sensors <= 0:
+            raise ValueError("num_sensors must be > 0 when provided")
+        if self.width <= 0.0:
+            raise ValueError("width must be > 0")
+        if self.height <= 0.0:
+            raise ValueError("height must be > 0")
+        if self.grid_size <= 1:
+            raise ValueError("grid_size must be > 1")
+        if self.alpha <= 0.0:
+            raise ValueError("alpha must be > 0")
+
+        self.grid_points = _build_grid_points(
+            width=self.width,
+            height=self.height,
+            grid_size=self.grid_size,
+            seed=self.seed,
+        )
+
+    def __call__(self, position):
+        x = np.asarray(position, dtype=float)
+        if x.ndim != 1:
+            raise ValueError("position must be a 1D array")
+
+        if self.num_sensors is None:
+            if x.size % 2 != 0:
+                raise ValueError("position length must be even: [x1, y1, ..., xM, yM]")
+            sensors_count = x.size // 2
+        else:
+            sensors_count = int(self.num_sensors)
+            expected = 2 * sensors_count
+            if x.size != expected:
+                raise ValueError(f"position length must be {expected} for num_sensors={sensors_count}")
+
+        coords = x.reshape(sensors_count, 2)
+
+        # If bounds are bypassed, penalize invalid sensor coordinates.
+        violation_x = np.maximum(0.0, -coords[:, 0]) + np.maximum(0.0, coords[:, 0] - self.width)
+        violation_y = np.maximum(0.0, -coords[:, 1]) + np.maximum(0.0, coords[:, 1] - self.height)
+        violation = float(np.sum(violation_x + violation_y))
+        if violation > 0.0:
+            return float(1.0 + violation)
+
+        if self.vectorized:
+            diff = self.grid_points[:, None, :] - coords[None, :, :]
+            dist_sq = np.sum(diff ** 2, axis=2, dtype=float)
+            p = np.exp(-self.alpha * dist_sq)
+            coverage_point = 1.0 - np.prod(1.0 - p, axis=1)
+            coverage_mean = float(np.mean(coverage_point))
+            return float(1.0 - coverage_mean)
+
+        coverage_values = []
+        for point in self.grid_points:
+            p_values = []
+            for sensor in coords:
+                dx = point[0] - sensor[0]
+                dy = point[1] - sensor[1]
+                p_values.append(np.exp(-self.alpha * (dx * dx + dy * dy)))
+            p_values = np.asarray(p_values, dtype=float)
+            coverage_values.append(1.0 - np.prod(1.0 - p_values))
+        coverage_mean = float(np.mean(coverage_values))
+        return float(1.0 - coverage_mean)
+
+
 def create_wsn_objective(
     num_sensors=None,
     width=100.0,
@@ -47,66 +131,12 @@ def create_wsn_objective(
     vectorized=True,
 ):
     """Create a WSN area-coverage objective function for PSO minimization."""
-    width = float(width)
-    height = float(height)
-    grid_size = int(grid_size)
-    alpha = float(alpha)
-
-    if num_sensors is not None and int(num_sensors) <= 0:
-        raise ValueError("num_sensors must be > 0 when provided")
-    if width <= 0.0:
-        raise ValueError("width must be > 0")
-    if height <= 0.0:
-        raise ValueError("height must be > 0")
-    if grid_size <= 1:
-        raise ValueError("grid_size must be > 1")
-    if alpha <= 0.0:
-        raise ValueError("alpha must be > 0")
-
-    grid_points = _build_grid_points(width=width, height=height, grid_size=grid_size, seed=seed)
-
-    def wsn_coverage_objective(position):
-        x = np.asarray(position, dtype=float)
-        if x.ndim != 1:
-            raise ValueError("position must be a 1D array")
-
-        if num_sensors is None:
-            if x.size % 2 != 0:
-                raise ValueError("position length must be even: [x1, y1, ..., xM, yM]")
-            sensors_count = x.size // 2
-        else:
-            sensors_count = int(num_sensors)
-            expected = 2 * sensors_count
-            if x.size != expected:
-                raise ValueError(f"position length must be {expected} for num_sensors={sensors_count}")
-
-        coords = x.reshape(sensors_count, 2)
-
-        # If bounds are bypassed, penalize invalid sensor coordinates.
-        violation_x = np.maximum(0.0, -coords[:, 0]) + np.maximum(0.0, coords[:, 0] - width)
-        violation_y = np.maximum(0.0, -coords[:, 1]) + np.maximum(0.0, coords[:, 1] - height)
-        violation = float(np.sum(violation_x + violation_y))
-        if violation > 0.0:
-            return float(1.0 + violation)
-
-        if vectorized:
-            diff = grid_points[:, None, :] - coords[None, :, :]
-            dist_sq = np.sum(diff ** 2, axis=2, dtype=float)
-            p = np.exp(-alpha * dist_sq)
-            coverage_point = 1.0 - np.prod(1.0 - p, axis=1)
-            coverage_mean = float(np.mean(coverage_point))
-            return float(1.0 - coverage_mean)
-
-        coverage_values = []
-        for point in grid_points:
-            p_values = []
-            for sensor in coords:
-                dx = point[0] - sensor[0]
-                dy = point[1] - sensor[1]
-                p_values.append(np.exp(-alpha * (dx * dx + dy * dy)))
-            p_values = np.asarray(p_values, dtype=float)
-            coverage_values.append(1.0 - np.prod(1.0 - p_values))
-        coverage_mean = float(np.mean(coverage_values))
-        return float(1.0 - coverage_mean)
-
-    return wsn_coverage_objective
+    return WSNCoverageObjective(
+        num_sensors=num_sensors,
+        width=width,
+        height=height,
+        grid_size=grid_size,
+        alpha=alpha,
+        seed=seed,
+        vectorized=vectorized,
+    )
