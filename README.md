@@ -53,6 +53,9 @@ El proyecto está organizado de la siguiente manera:
 - **README.md**  
   Explicación general y comandos.
 
+- **docs/design.md**  
+  Documento corto de diseño de arquitectura y decisiones técnicas.
+
 - **requirements.txt**  
   Dependencias necesarias.
 
