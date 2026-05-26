@@ -8,7 +8,7 @@ from pathlib import Path
 
 import numpy as np
 
-from core import PSO, PSOParams, BoxBounds, ClampPolicy, SequentialEvaluator
+from core import PSO, PSOVectorized, PSOParams, BoxBounds, ClampPolicy, SequentialEvaluator
 from objectives import BENCHMARKS, make_async_objective
 from parallel.async_evaluator import AsyncEvaluator
 from parallel.process_evaluator import ProcessPoolEvaluator
@@ -30,18 +30,6 @@ def _run_one(objective_name, objective_spec, dim, seed, pso_params, strategy, wo
     high = objective_spec["high"] * np.ones(dim)
 
     bounds = BoxBounds(low=low, high=high)
-
-    # Select evaluator depending on the execution strategy.
-    if strategy == "v1":
-        evaluator = ThreadPoolEvaluator(objective, workers=workers)
-    elif strategy == "v2":
-        evaluator = ProcessPoolEvaluator(objective, workers=workers, batch_size=batch_size)
-    elif strategy == "v3":
-        async_objective = make_async_objective(objective, latency=async_latency)
-        evaluator = AsyncEvaluator(async_objective, workers=workers)
-    else:
-        evaluator = SequentialEvaluator(objective)
-
     params = PSOParams(
         n_particles=pso_params["n_particles"],
         n_iters=pso_params["n_iters"],
@@ -56,7 +44,23 @@ def _run_one(objective_name, objective_spec, dim, seed, pso_params, strategy, wo
         log_every_iters=pso_params["log_every_iters"],
     )
 
-    pso = PSO(bounds=bounds, evaluator=evaluator, params=params, bounds_policy=ClampPolicy())
+    # Select evaluator depending on the execution strategy.
+    if strategy == "v1":
+        evaluator = ThreadPoolEvaluator(objective, workers=workers)
+        pso = PSO(bounds=bounds, evaluator=evaluator, params=params, bounds_policy=ClampPolicy())
+    elif strategy == "v2":
+        evaluator = ProcessPoolEvaluator(objective, workers=workers, batch_size=batch_size)
+        pso = PSO(bounds=bounds, evaluator=evaluator, params=params, bounds_policy=ClampPolicy())
+    elif strategy == "v3":
+        async_objective = make_async_objective(objective, latency=async_latency)
+        evaluator = AsyncEvaluator(async_objective, workers=workers)
+        pso = PSO(bounds=bounds, evaluator=evaluator, params=params, bounds_policy=ClampPolicy())
+    elif strategy == "v4":
+        evaluator = None
+        pso = PSOVectorized(bounds=bounds, objective=objective, params=params, bounds_policy=ClampPolicy())
+    else:
+        evaluator = SequentialEvaluator(objective)
+        pso = PSO(bounds=bounds, evaluator=evaluator, params=params, bounds_policy=ClampPolicy())
 
     try:
         best_x, best_f, history = pso.run()
@@ -98,10 +102,10 @@ def _write_csv(path, rows, headers):
 
 def main():
     """Run the full benchmark suite and save the results."""
-    parser = argparse.ArgumentParser(description="Run PSO benchmark suite (V0 sequential / V1 threads / V2 processes / V3 asyncio).")
+    parser = argparse.ArgumentParser(description="Run PSO benchmark suite (V0 sequential / V1 threads / V2 processes / V3 asyncio / V4 vectorized).")
     parser.add_argument("--dims", default="2,10,30", help="Comma-separated dimensions")
     parser.add_argument("--seeds", default="7,19,31,43,59", help="Comma-separated seeds")
-    parser.add_argument("--strategy", choices=["v0", "v1", "v2", "v3"], default="v0", help="Execution strategy")
+    parser.add_argument("--strategy", choices=["v0", "v1", "v2", "v3", "v4"], default="v0", help="Execution strategy")
     parser.add_argument("--workers", type=int, default=0, help="Workers for v1/v2/v3")
     parser.add_argument("--batch-size", type=int, default=0, help="Batch size for v2")
     parser.add_argument("--async-latency", type=float, default=0.01, help="Artificial latency for v3 objective")
