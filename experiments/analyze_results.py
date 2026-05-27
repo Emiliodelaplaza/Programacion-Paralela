@@ -211,6 +211,48 @@ def _plot_convergence(history_rows, output_path: Path):
     return True
 
 
+def _detect_final_fitness_column(summary_rows):
+    if not summary_rows:
+        return None
+    candidates = ["best_fitness", "best_f", "final_fitness", "fitness"]
+    sample_keys = summary_rows[0].keys()
+    for name in candidates:
+        if name in sample_keys:
+            return name
+    return None
+
+
+def _plot_fitness_boxplot_by_strategy(summary_rows, fitness_col, output_path: Path):
+    by_strategy = {}
+    for row in summary_rows:
+        strategy = row.get("strategy", "unknown")
+        value = _to_float(row.get(fitness_col))
+        if value is None:
+            continue
+        by_strategy.setdefault(strategy, []).append(value)
+
+    labels = sorted(by_strategy.keys())
+    data = [by_strategy[label] for label in labels if by_strategy[label]]
+    labels = [label for label in labels if by_strategy[label]]
+
+    if not data:
+        return False
+
+    fig, ax = plt.subplots(figsize=(8, 4.5))
+    try:
+        ax.boxplot(data, tick_labels=labels, showfliers=True)
+    except TypeError:
+        ax.boxplot(data, labels=labels, showfliers=True)
+    ax.set_xlabel("Strategy")
+    ax.set_ylabel("Final fitness")
+    ax.set_title("Final fitness distribution by strategy")
+    ax.grid(True, axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(output_path, dpi=140)
+    plt.close(fig)
+    return True
+
+
 def main():
     parser = argparse.ArgumentParser(description="Analyze PSO results from summary/history/metadata files.")
     parser.add_argument("--input-dir", required=True, help="Directory with one run or multiple run folders")
@@ -293,6 +335,19 @@ def main():
         times_plot = output_dir / "analysis_times_by_strategy.png"
         _plot_times(table, times_plot)
         logging.info("Time comparison plot saved in: %s", times_plot)
+
+        fitness_col = _detect_final_fitness_column(summary_rows)
+        if fitness_col is None:
+            logging.warning(
+                "Final fitness column not found in summary rows. Expected one of: best_fitness, best_f, final_fitness, fitness"
+            )
+        else:
+            fitness_plot = output_dir / "analysis_fitness_boxplot_by_strategy.png"
+            fitness_plotted = _plot_fitness_boxplot_by_strategy(summary_rows, fitness_col, fitness_plot)
+            if fitness_plotted:
+                logging.info("Final fitness boxplot saved in: %s", fitness_plot)
+            else:
+                logging.warning("Final fitness boxplot was skipped (no usable fitness data)")
 
         conv_plot = output_dir / "analysis_convergence_by_strategy.png"
         plotted = _plot_convergence(history_rows, conv_plot)

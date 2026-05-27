@@ -111,6 +111,7 @@ La metodología usada en los resultados locales se reconstruye a partir de `meta
 
 La fuente principal de resultados agregados es `results/analysis_summary.csv` (idéntico en `results_sample/analysis_summary.csv` para este conjunto). También se consideran:
 - `results/analysis_times_by_strategy.png`
+- `results/analysis_fitness_boxplot_by_strategy.png`
 - `results/analysis_convergence_by_strategy.png`
 - `results/viz/wsn_coverage.png` (y copia en `results_sample/wsn_coverage.png`).
 
@@ -153,6 +154,7 @@ En este conjunto local, **V4** es la variante con mejor tiempo medio total y pre
 ### 8.3 Comentario de fitness final
 
 Los valores de fitness medios no son directamente comparables entre todas las estrategias porque el número de ejecuciones y objetivos cubiertos no es homogéneo (por ejemplo, V3 solo tiene `n_runs=2` y enfocados en WSN). Por prudencia, la conclusión fuerte de esta sección se centra en tiempos, no en ranking absoluto de calidad.
+El boxplot `analysis_fitness_boxplot_by_strategy.png` complementa este punto mostrando dispersión y posibles outliers del fitness final por estrategia.
 
 ### 8.4 Comentario de convergencia
 

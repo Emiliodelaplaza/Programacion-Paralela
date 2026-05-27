@@ -164,6 +164,7 @@ py
 py -m experiments.analyze_results --input-dir results\benchmarks_v4_YYYYMMDD_HHMMSS
 
 Este script carga resultados guardados, genera un resumen por estrategia y crea gráficas comparativas de tiempos y convergencia.
+También genera `analysis_fitness_boxplot_by_strategy.png` con la distribución del fitness final por estrategia.
 
 ## Archivos de salida
 
