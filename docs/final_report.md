@@ -43,7 +43,7 @@ El proyecto implementa los siguientes benchmarks clásicos:
 - **Rastrigin**
 - **Ackley**
 
-En los resultados locales utilizados para este informe (`results/` y `results_sample/`) se han ejecutado principalmente subconjuntos filtrados por objetivo (por ejemplo `rastrigin`, `ackley`, `wsn`). Por tanto, la discusión cuantitativa se basa en las ejecuciones realmente disponibles en esos CSV.
+En los resultados finales se han ejecutado los cuatro benchmarks clásicos en dimensiones 2, 10 y 30, además del caso WSN en dimensiones 10 y 30. La estrategia V3 se evaluó de forma reducida sobre WSN con latencia simulada, por lo que algunas comparaciones de fitness deben interpretarse con cautela.
 
 ## 5. Caso de uso aplicado WSN
 
@@ -132,7 +132,7 @@ En la ejecución final del análisis sobre `results/` se cargaron:
 
 Valores medios reportados:
 
-- **V0** (`n_runs=44`):
+- **V0** (`n_runs=204`):
   - `mean_elapsed_seconds = 0.055904`
   - `mean_best_fitness = 13.65360`
   - `mean_fitness_eval_seconds = 0.040736`
@@ -182,6 +182,7 @@ En el análisis final, **V4** vuelve a ser la variante con mejor tiempo medio to
 ### 8.3 Comentario de fitness final
 
 Los valores de fitness medios no son directamente comparables entre todas las estrategias porque el número de ejecuciones y objetivos cubiertos no es completamente homogéneo (por ejemplo, V3 se evaluó solo en WSN). Por prudencia, la conclusión fuerte de esta sección se centra en tiempos, no en ranking absoluto de calidad.
+
 El boxplot `analysis_fitness_boxplot_by_strategy.png` complementa este punto mostrando la dispersión del fitness final por estrategia.
 
 ### 8.4 Comentario de convergencia
@@ -220,4 +221,4 @@ Recomendaciones para trabajo futuro:
 - Ejecutar campañas más amplias con misma matriz de objetivos/dimensiones para todas las estrategias.
 - Repetir en múltiples máquinas para estimar variabilidad por hardware.
 - Analizar sensibilidad de V2 al `batch_size` y número de workers.
-- Ampliar WSN con modelos más realistas (obstáculos, ruido, restricciones adicionales).
+- Ampliar WSN con modelos más realistas (obstáculos, ruido, restricciones adicionales). 
