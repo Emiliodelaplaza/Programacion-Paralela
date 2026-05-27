@@ -83,22 +83,30 @@ La evaluación exige operar sobre muchos puntos de rejilla y sensores por partí
 
 La metodología usada en los resultados locales se reconstruye a partir de `metadata.json` y `analysis_summary.csv`:
 
-### Benchmarks principales (`results/benchmarks_v*_20260526_*`)
-- Objetivos: en general `rastrigin`, `ackley`, `wsn` (y para V3 solo `wsn` en esas ejecuciones).
-- Dimensiones: `10` y `30` (V3: `10`).
-- Semillas: `1,2`.
-- Partículas: `25`.
-- Iteraciones: `80`.
-- Parámetros PSO: `w=0.72`, `c1=1.49`, `c2=1.49`, `vmax_frac=0.2`.
-- V2: `workers=4`, `batch_size=5`.
-- V3: `workers=4`, `async_latency=0.001`.
+### Benchmarks principales
+- Benchmarks clásicos: `sphere`, `rosenbrock`, `rastrigin`, `ackley`.
+- Dimensiones: `2`, `10`, `30`.
+- Semillas: `1`, `2`, `3`.
+- Estrategias evaluadas: `v0`, `v1`, `v2`, `v4`.
 
-### Grid search reducido (`results/grid_v0_20260526_192623`, `results/grid_v4_20260526_192637`)
-- Objetivos: `rastrigin`, `wsn`.
+### Caso WSN (campaña específica)
+- Objetivo: `wsn`.
+- Dimensiones: `10`, `30`.
+- Semillas: `1`, `2`, `3`.
+- Estrategias evaluadas: `v0`, `v1`, `v2`, `v4`.
+
+### Campaña V3 asyncio (reducida)
+- Objetivo: `wsn`.
 - Dimensión: `10`.
-- Semillas: `1,2`.
-- Rejilla: `w in {0.5,0.7}`, `c1 in {1.2,1.7}`, `c2 in {1.2,1.7}`, `n_particles=20`, `n_iters=60`.
-- Total por estrategia: `32` ejecuciones.
+- Semillas: `1`, `2`, `3`.
+- Configuración: `workers=4`, `async_latency=0.001`.
+
+### Grid search final (reducido pero más amplio)
+- Objetivos: `rastrigin` y `wsn`.
+- Dimensión: `10`.
+- Semillas: `1`, `2`, `3`.
+- Rejilla `3x3x3`: `w={0.4,0.7,0.9}`, `c1={1.0,1.5,2.0}`, `c2={1.0,1.5,2.0}`.
+- `n_particles=20`, `n_iters=60`.
 
 ### Métricas medidas
 - `best_fitness`
@@ -115,46 +123,66 @@ La fuente principal de resultados agregados es `results/analysis_summary.csv` (i
 - `results/analysis_convergence_by_strategy.png`
 - `results/viz/wsn_coverage.png` (y copia en `results_sample/wsn_coverage.png`).
 
+En la ejecución final del análisis sobre `results/` se cargaron:
+- `10` carpetas de ejecución,
+- `333` filas de `summary`,
+- `13851` filas de `history`.
+
 ### 8.1 Resumen cuantitativo (análisis agregado)
 
 Valores medios reportados:
 
 - **V0** (`n_runs=44`):
-  - `mean_elapsed_seconds = 0.0644`
-  - `mean_best_fitness = 11.2694`
+  - `mean_elapsed_seconds = 0.055904`
+  - `mean_best_fitness = 13.65360`
+  - `mean_fitness_eval_seconds = 0.040736`
+  - `mean_state_update_seconds = 0.014668`
   - `speedup_vs_v0 = 1.00`
+  - `mean_overhead_seconds = 0.000500`
 
-- **V1** (`n_runs=12`):
-  - `mean_elapsed_seconds = 0.1094`
-  - `mean_best_fitness = 17.7501`
-  - `speedup_vs_v0 = 0.588`
-  - `efficiency = 0.147`
+- **V1** (`n_runs=42`):
+  - `mean_elapsed_seconds = 0.080245`
+  - `mean_best_fitness = 14.05837`
+  - `mean_fitness_eval_seconds = 0.059051`
+  - `mean_state_update_seconds = 0.020249`
+  - `speedup_vs_v0 = 0.697`
+  - `efficiency = 0.174`
+  - `mean_overhead_seconds = 0.000944`
 
-- **V2** (`n_runs=12`):
-  - `mean_elapsed_seconds = 0.3297`
-  - `mean_best_fitness = 17.7501`
-  - `speedup_vs_v0 = 0.195`
-  - `efficiency = 0.0488`
+- **V2** (`n_runs=42`):
+  - `mean_elapsed_seconds = 0.353730`
+  - `mean_best_fitness = 14.05837`
+  - `mean_fitness_eval_seconds = 0.328024`
+  - `mean_state_update_seconds = 0.024524`
+  - `speedup_vs_v0 = 0.158`
+  - `efficiency = 0.040`
+  - `mean_overhead_seconds = 0.001182`
 
-- **V3** (`n_runs=2`):
-  - `mean_elapsed_seconds = 7.0729`
-  - `mean_best_fitness = 0.7659`
-  - `speedup_vs_v0 = 0.0091`
-  - `efficiency = 0.00227`
+- **V3** (`n_runs=3`):
+  - `mean_elapsed_seconds = 8.258013`
+  - `mean_best_fitness = 0.765929`
+  - `mean_fitness_eval_seconds = 8.205812`
+  - `mean_state_update_seconds = 0.048767`
+  - `speedup_vs_v0 = 0.007`
+  - `efficiency = 0.002`
+  - `mean_overhead_seconds = 0.003433`
 
-- **V4** (`n_runs=44`):
-  - `mean_elapsed_seconds = 0.0461`
-  - `mean_best_fitness = 11.9551`
-  - `speedup_vs_v0 = 1.395`
+- **V4** (`n_runs=42`):
+  - `mean_elapsed_seconds = 0.030813`
+  - `mean_best_fitness = 14.16655`
+  - `mean_fitness_eval_seconds = 0.028412`
+  - `mean_state_update_seconds = 0.001674`
+  - `speedup_vs_v0 = 1.814`
+  - `mean_overhead_seconds = 0.000727`
 
 ### 8.2 Comentario de tiempos y speedup
 
-En este conjunto local, **V4** es la variante con mejor tiempo medio total y presenta el único speedup superior a 1 frente a V0. V1 y V2 no mejoran al baseline en estas configuraciones concretas, y V3 aparece claramente penalizada en tiempo por su escenario de latencia simulada.
+En el análisis final, **V4** vuelve a ser la variante con mejor tiempo medio total y presenta el mayor speedup frente a V0 (`1.814`). V1 y V2 no superan al baseline en este conjunto, y V3 aparece claramente penalizada en tiempo por su escenario de latencia simulada.
 
 ### 8.3 Comentario de fitness final
 
-Los valores de fitness medios no son directamente comparables entre todas las estrategias porque el número de ejecuciones y objetivos cubiertos no es homogéneo (por ejemplo, V3 solo tiene `n_runs=2` y enfocados en WSN). Por prudencia, la conclusión fuerte de esta sección se centra en tiempos, no en ranking absoluto de calidad.
-El boxplot `analysis_fitness_boxplot_by_strategy.png` complementa este punto mostrando dispersión y posibles outliers del fitness final por estrategia.
+Los valores de fitness medios no son directamente comparables entre todas las estrategias porque el número de ejecuciones y objetivos cubiertos no es completamente homogéneo (por ejemplo, V3 se evaluó solo en WSN). Por prudencia, la conclusión fuerte de esta sección se centra en tiempos, no en ranking absoluto de calidad.
+El boxplot `analysis_fitness_boxplot_by_strategy.png` complementa este punto mostrando la dispersión del fitness final por estrategia.
 
 ### 8.4 Comentario de convergencia
 
