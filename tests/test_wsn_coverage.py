@@ -7,6 +7,7 @@ from objectives import create_wsn_objective, make_wsn_bounds
 
 
 def test_wsn_objective_returns_float_and_valid_range():
+    # Valid sensor coordinates should produce a fitness in [0, 1].
     objective = create_wsn_objective(num_sensors=3, width=100.0, height=60.0, grid_size=12, alpha=0.01)
     position = np.array([10.0, 10.0, 50.0, 30.0, 90.0, 50.0], dtype=float)
     fitness = objective(position)
@@ -16,6 +17,7 @@ def test_wsn_objective_returns_float_and_valid_range():
 
 
 def test_wsn_objective_reproducibility_with_seeded_grid():
+    # Two objectives with the same seed must build the same sampled grid.
     objective_1 = create_wsn_objective(
         num_sensors=2,
         width=80.0,
@@ -36,10 +38,12 @@ def test_wsn_objective_reproducibility_with_seeded_grid():
 
     f1 = objective_1(position)
     f2 = objective_2(position)
+
     assert np.isclose(f1, f2, rtol=0.0, atol=1e-15)
 
 
 def test_wsn_bounds_length_matches_num_sensors():
+    # Each sensor contributes two decision variables: x and y.
     low, high = make_wsn_bounds(num_sensors=5, width=100.0, height=60.0)
 
     assert low.shape == (10,)
@@ -47,6 +51,7 @@ def test_wsn_bounds_length_matches_num_sensors():
 
 
 def test_wsn_reasonable_sensor_layout_does_not_fail():
+    # A simple four-corner layout should be a valid solution candidate.
     objective = create_wsn_objective(num_sensors=4, width=100.0, height=60.0, grid_size=14, alpha=0.01)
     position = np.array([10.0, 10.0, 90.0, 10.0, 10.0, 50.0, 90.0, 50.0], dtype=float)
     fitness = objective(position)
@@ -55,13 +60,17 @@ def test_wsn_reasonable_sensor_layout_does_not_fail():
 
 
 def test_wsn_raises_for_wrong_position_size():
+    # With 3 sensors, the expected vector length is 6.
     objective = create_wsn_objective(num_sensors=3, width=100.0, height=60.0)
+
     with pytest.raises(ValueError):
         objective(np.array([1.0, 2.0, 3.0], dtype=float))
 
 
 def test_wsn_objective_is_pickle_serializable():
+    # Multiprocessing on Windows requires the objective to be pickle-serializable.
     objective = create_wsn_objective(num_sensors=3, width=100.0, height=60.0, grid_size=10, alpha=0.01, seed=7)
     restored = pickle.loads(pickle.dumps(objective))
     position = np.array([10.0, 10.0, 50.0, 30.0, 90.0, 50.0], dtype=float)
+
     assert np.isclose(objective(position), restored(position), rtol=0.0, atol=1e-15)

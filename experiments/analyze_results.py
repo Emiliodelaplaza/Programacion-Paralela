@@ -5,17 +5,21 @@ import logging
 from pathlib import Path
 
 import matplotlib
+
+# Use a non-interactive backend so the script works in terminals/CI without a display.
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
 
 
 def _read_csv_rows(path: Path):
+    # Read a CSV file as a list of dictionaries, one dictionary per row.
     with path.open("r", newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
 def _read_metadata(path: Path):
+    # Metadata is optional; if it is missing or malformed, analysis can continue.
     if not path.exists():
         return {}
     try:
@@ -25,6 +29,7 @@ def _read_metadata(path: Path):
 
 
 def _to_float(value):
+    # Convert CSV string values into floats while tolerating missing/invalid data.
     try:
         return float(value)
     except Exception:
@@ -32,6 +37,7 @@ def _to_float(value):
 
 
 def _to_int(value):
+    # Convert CSV string values into integers while tolerating missing/invalid data.
     try:
         return int(value)
     except Exception:
@@ -39,21 +45,27 @@ def _to_int(value):
 
 
 def _detect_strategy(run_dir: Path, metadata, summary_rows):
+    # Prefer the explicit strategy stored in summary.csv.
     if summary_rows and "strategy" in summary_rows[0] and summary_rows[0]["strategy"]:
         return summary_rows[0]["strategy"]
+
+    # Fall back to metadata.json if needed.
     if "strategy" in metadata and metadata["strategy"]:
         return str(metadata["strategy"])
 
+    # Last fallback: infer the strategy from folder names like benchmarks_v4_...
     name = run_dir.name
     if "_v" in name:
         parts = name.split("_")
         for part in parts:
             if part.startswith("v"):
                 return part
+
     return "unknown"
 
 
 def _discover_run_dirs(input_dir: Path):
+    # The input can be either a single run directory or a parent directory with many runs.
     if (input_dir / "summary.csv").exists():
         return [input_dir]
 
@@ -61,15 +73,18 @@ def _discover_run_dirs(input_dir: Path):
     for child in input_dir.iterdir():
         if child.is_dir() and (child / "summary.csv").exists():
             run_dirs.append(child)
+
     return sorted(run_dirs)
 
 
 def _compute_strategy_summary(summary_rows):
+    # Group all loaded summary rows by strategy.
     by_strategy = {}
     for row in summary_rows:
         strategy = row.get("strategy", "unknown")
         by_strategy.setdefault(strategy, []).append(row)
 
+    # V0 is the baseline used for speedup calculations.
     baseline_elapsed = None
     if "v0" in by_strategy:
         v0_elapsed = [_to_float(r.get("elapsed_seconds")) for r in by_strategy["v0"]]
@@ -80,12 +95,15 @@ def _compute_strategy_summary(summary_rows):
     table = []
     for strategy in sorted(by_strategy.keys()):
         rows = by_strategy[strategy]
+
+        # Extract numeric metrics from CSV rows.
         best_vals = [_to_float(r.get("best_fitness")) for r in rows]
         elapsed_vals = [_to_float(r.get("elapsed_seconds")) for r in rows]
         eval_vals = [_to_float(r.get("fitness_eval_seconds")) for r in rows]
         update_vals = [_to_float(r.get("state_update_seconds")) for r in rows]
         workers_vals = [_to_int(r.get("workers")) for r in rows]
 
+        # Drop missing values so older/incomplete results do not break the analysis.
         best_vals = [v for v in best_vals if v is not None]
         elapsed_vals = [v for v in elapsed_vals if v is not None]
         eval_vals = [v for v in eval_vals if v is not None]
@@ -97,6 +115,7 @@ def _compute_strategy_summary(summary_rows):
         mean_eval = float(np.mean(eval_vals)) if eval_vals else np.nan
         mean_update = float(np.mean(update_vals)) if update_vals else np.nan
 
+        # Estimate overhead as total time minus measured evaluation and update time.
         if elapsed_vals and eval_vals and update_vals:
             overhead_vals = [
                 e - fe - su for e, fe, su in zip(elapsed_vals, eval_vals, update_vals)
@@ -140,6 +159,7 @@ def _compute_strategy_summary(summary_rows):
 
 
 def _write_summary_csv(table, output_path: Path):
+    # Save the aggregated strategy-level metrics.
     headers = [
         "strategy",
         "n_runs",
@@ -152,6 +172,7 @@ def _write_summary_csv(table, output_path: Path):
         "speedup_vs_v0",
         "efficiency",
     ]
+
     with output_path.open("w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=headers)
         writer.writeheader()
@@ -159,6 +180,7 @@ def _write_summary_csv(table, output_path: Path):
 
 
 def _plot_times(table, output_path: Path):
+    # Plot mean elapsed time per strategy.
     labels = [row["strategy"] for row in table]
     values = [row["mean_elapsed_seconds"] for row in table]
     values = [v if np.isfinite(v) else 0.0 for v in values]
@@ -175,13 +197,16 @@ def _plot_times(table, output_path: Path):
 
 
 def _plot_convergence(history_rows, output_path: Path):
+    # Build a nested dictionary: strategy -> iteration -> list of best fitness values.
     by_strategy = {}
     for row in history_rows:
         strategy = row.get("strategy", "unknown")
         iteration = _to_int(row.get("iteration"))
         best_f = _to_float(row.get("best_fitness"))
+
         if iteration is None or best_f is None:
             continue
+
         by_strategy.setdefault(strategy, {}).setdefault(iteration, []).append(best_f)
 
     if not by_strategy:
@@ -189,6 +214,7 @@ def _plot_convergence(history_rows, output_path: Path):
 
     fig, ax = plt.subplots(figsize=(7, 4))
     plotted = False
+
     for strategy in sorted(by_strategy.keys()):
         per_iter = by_strategy[strategy]
         iters = sorted(per_iter.keys())
@@ -212,23 +238,30 @@ def _plot_convergence(history_rows, output_path: Path):
 
 
 def _detect_final_fitness_column(summary_rows):
+    # Accept several possible names to stay compatible with older result files.
     if not summary_rows:
         return None
+
     candidates = ["best_fitness", "best_f", "final_fitness", "fitness"]
     sample_keys = summary_rows[0].keys()
+
     for name in candidates:
         if name in sample_keys:
             return name
+
     return None
 
 
 def _plot_fitness_boxplot_by_strategy(summary_rows, fitness_col, output_path: Path):
+    # Group final fitness values by strategy and plot their distribution.
     by_strategy = {}
     for row in summary_rows:
         strategy = row.get("strategy", "unknown")
         value = _to_float(row.get(fitness_col))
+
         if value is None:
             continue
+
         by_strategy.setdefault(strategy, []).append(value)
 
     labels = sorted(by_strategy.keys())
@@ -239,10 +272,13 @@ def _plot_fitness_boxplot_by_strategy(summary_rows, fitness_col, output_path: Pa
         return False
 
     fig, ax = plt.subplots(figsize=(8, 4.5))
+
+    # Matplotlib renamed labels to tick_labels in newer versions, so support both.
     try:
         ax.boxplot(data, tick_labels=labels, showfliers=True)
     except TypeError:
         ax.boxplot(data, labels=labels, showfliers=True)
+
     ax.set_xlabel("Strategy")
     ax.set_ylabel("Final fitness")
     ax.set_title("Final fitness distribution by strategy")
@@ -289,11 +325,13 @@ def main():
         metadata = _read_metadata(metadata_path)
         strategy = _detect_strategy(run_dir, metadata, run_summary)
 
+        # Normalize strategy field so downstream aggregation always works.
         for row in run_summary:
             row = dict(row)
             row["strategy"] = row.get("strategy") or strategy
             summary_rows.append(row)
 
+        # history.csv is optional, especially for grid search outputs.
         if history_path.exists():
             run_history = _read_csv_rows(history_path)
             for row in run_history:
@@ -336,6 +374,7 @@ def main():
         _plot_times(table, times_plot)
         logging.info("Time comparison plot saved in: %s", times_plot)
 
+        # Add a boxplot of final fitness if a compatible column exists.
         fitness_col = _detect_final_fitness_column(summary_rows)
         if fitness_col is None:
             logging.warning(
