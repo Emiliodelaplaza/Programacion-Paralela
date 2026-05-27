@@ -174,6 +174,19 @@ En una ejecución de benchmarks o grid se generan, como mínimo:
 - **`summary.csv`**: una fila por ejecución con métricas finales y de tiempos.
 - **`history.csv`**: historial de convergencia por iteración (cuando aplica, por ejemplo en benchmarks).
 
+Además, en la entrega se incluyen dos carpetas de resultados con propósito distinto:
+
+- **`results/`**: contiene los resultados completos generados por los scripts de experimentación, incluyendo carpetas `benchmarks_v0`, `benchmarks_v1`, `benchmarks_v2`, `benchmarks_v3`, `benchmarks_v4`, ejecuciones de grid search, `metadata.json`, `summary.csv`, `history.csv` cuando aplica, gráficos de análisis y la visualización WSN.
+
+- **`results_sample/`**: contiene una selección reducida para revisión rápida del corrector, con archivos representativos:
+  - `analysis_summary.csv`
+  - `analysis_times_by_strategy.png`
+  - `analysis_convergence_by_strategy.png`
+  - `analysis_fitness_boxplot_by_strategy.png`
+  - `wsn_coverage.png`
+
+`results_sample/` no sustituye a `results/`; es solo una carpeta resumen con los resultados más representativos.
+
 ## Test
 
 py
